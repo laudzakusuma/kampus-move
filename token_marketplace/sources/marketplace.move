@@ -1,14 +1,12 @@
 module token_marketplace::kampus_marketplace {
     // --- Imports ---
-    // We only need to import what isn't automatically available.
+    // Cleaned up to remove redundant aliases provided by default by the compiler.
     use sui::coin::{Self, Coin, TreasuryCap};
     use sui::table::{Self, Table};
-    use std::string::{Self, String};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
-    use std::option;
-    use sui::object::{Self, ID, UID};
+    use std::string::String;
     use sui::event;
+    // Many common modules like 'transfer', 'option', 'tx_context', and 'object'
+    // are automatically in scope and don't need to be imported explicitly.
 
     // --- Structs ---
 
@@ -124,12 +122,13 @@ module token_marketplace::kampus_marketplace {
     }
 
     // Buys an item from the marketplace.
+    // Returns the leftover Coin object (change) to make the function composable.
     public fun buy_item(
         marketplace: &mut Marketplace,
         item_id: ID,
         mut payment: Coin<KAMPUS_MARKETPLACE>,
         ctx: &mut TxContext
-    ) {
+    ): Coin<KAMPUS_MARKETPLACE> {
         assert!(table::contains(&marketplace.items, item_id), 0);
         let item = table::borrow_mut(&mut marketplace.items, item_id);
 
@@ -148,13 +147,6 @@ module token_marketplace::kampus_marketplace {
         let seller_payment = coin::split(&mut payment, seller_amount, ctx);
         transfer::public_transfer(seller_payment, item.seller);
 
-        // Return any change to the buyer
-        if (coin::value(&payment) > 0) {
-            transfer::public_transfer(payment, tx_context::sender(ctx));
-        } else {
-            coin::destroy_zero(payment);
-        };
-
         item.available = false;
 
         event::emit(ItemSold {
@@ -163,6 +155,10 @@ module token_marketplace::kampus_marketplace {
             seller: item.seller,
             price: item.price,
         });
+
+        // Return the remaining payment object (change) to the caller.
+        // The caller is now responsible for handling it (e.g., transferring it).
+        payment
     }
     
     // Removes an item from the marketplace.
