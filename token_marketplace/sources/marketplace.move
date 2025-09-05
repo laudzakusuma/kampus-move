@@ -155,13 +155,9 @@ module token_marketplace::kampus_marketplace {
             seller: item.seller,
             price: item.price,
         });
-
-        // Return the remaining payment object (change) to the caller.
-        // The caller is now responsible for handling it (e.g., transferring it).
         payment
     }
     
-    // Removes an item from the marketplace.
     public fun remove_item(
         marketplace: &mut Marketplace,
         item_id: ID,
@@ -171,24 +167,17 @@ module token_marketplace::kampus_marketplace {
         let item_info = table::borrow(&marketplace.items, item_id);
         assert!(item_info.seller == tx_context::sender(ctx), 3);
 
-        // Remove from table and get the full MarketItem object
         let item: MarketItem = table::remove(&mut marketplace.items, item_id);
         
-        // Manually deconstruct the object and delete its UID
         let MarketItem {id, name: _, description: _, price: _, seller: _, available: _} = item;
 		object::delete(id);
 
         marketplace.total_items = marketplace.total_items - 1;
     }
 
-
-    // --- View Functions ---
-
-    // Returns information about an item.
     public fun get_item_info(marketplace: &Marketplace, item_id: ID): (String, String, u64, address, bool) {
         assert!(table::contains(&marketplace.items, item_id), 0);
         let item = table::borrow(&marketplace.items, item_id);
-        // We don't need .to_string() because the fields are already Strings.
         (item.name, item.description, item.price, item.seller, item.available)
     }
 }
